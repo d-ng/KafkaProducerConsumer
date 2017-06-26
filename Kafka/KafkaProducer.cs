@@ -1,12 +1,10 @@
-﻿using KafkaNet;
+﻿using System;
+using System.Threading;
+using System.Collections.Generic;
+using System.Text;
+using KafkaNet;
 using KafkaNet.Model;
 using KafkaNet.Protocol;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Kafka
 {
@@ -17,10 +15,12 @@ namespace Kafka
         private Producer _client;
 
         private string _topic;
+        private int _meterNum;
+        private Timer _timer;
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        public KafkaProducer(string url, string topic, int delay = 2000)
+        public KafkaProducer(string url, string topic, int meterNum, int intervalms, int delay = 2000)
         {
             if (string.IsNullOrEmpty(url))
             {
@@ -35,7 +35,9 @@ namespace Kafka
             _router = new BrokerRouter(_options);
             _client = new Producer(_router);
             _topic = topic;
+            _meterNum = meterNum;
 
+            _timer = new Timer(SendEvents, null, 0, intervalms);
         }
 
         public void Stop()
@@ -43,17 +45,31 @@ namespace Kafka
             _cts.Cancel();
         }
 
-        public async Task Start()
+        public void SendEvents(object state)
         {
-            var idx = 0;
-            while(!_cts.Token.IsCancellationRequested)
+            DateTime time = DateTime.UtcNow;
+            Console.WriteLine("{0}: Sending message", time);
+            int start = 0;
+            int batchSize = 1000;
+                
+            while (start < _meterNum)
             {
-                var message = "test message #" + idx.ToString();
-                await _client.SendMessageAsync(_topic, new[] { new Message(message)});
-                Console.WriteLine("Message {0} has been sent", message);
-                Thread.Sleep(2000);
+                Console.WriteLine("start {0}", start);
+                IEnumerable<Message> messages = GenerateData(time, start, batchSize);
+                _client.SendMessageAsync(_topic, messages).Wait();
+                Thread.Sleep(750);
+                start += batchSize;
+            }
+        }
 
-                idx++;
+        private IEnumerable<Message> GenerateData(DateTime time, int start, int count)
+        {
+            StringBuilder sb = new StringBuilder();
+            Random random = new Random();
+            for (int i = start; i < start + count; i++)
+            {
+                MeterItem item = MeterItem.GenerateRandomMeterItem(i, time, _meterNum, random);
+                yield return new Message(item.ToString());
             }
 
         }

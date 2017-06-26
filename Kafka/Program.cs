@@ -1,30 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Kafka;
-using KafkaNet.Common;
-using KafkaNet.Model;
-using KafkaNet;
 
 namespace Kafka
 {
     class Program
     {
-        const string url = "http://10.4.200.9:32768";
-        const string topic = "TestOS_2";
+        const string url = "http://10.32.193.218:9092";
+        const string topic = "kafka-test-10000meters-15s";
+        const int meterNum = 10000;
+        const int intervalms = 15000;
+        
         static void Main(string[] args)
         {
-            //Uncomment it if you need producer as well
-            //var producer = new KafkaProducer(url, topic);
-            //producer.Start();
+            KafkaProducer producer = new KafkaProducer(url, topic, meterNum, intervalms);
 
-            var consumer = new KafkaConsumer(url, topic);
-            consumer.Start();
+            //var consumer = new KafkaConsumer(url, topic);
+            //consumer.Start();
 
             Console.ReadLine();
-
         }
     }
 }
